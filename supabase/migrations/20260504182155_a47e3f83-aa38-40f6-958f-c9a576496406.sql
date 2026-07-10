@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.generate_client_id(text) FROM PUBLIC, anon, authenticated;

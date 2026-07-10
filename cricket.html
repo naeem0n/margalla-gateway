@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Cricket Overall Figures</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+
+    <style>
+        :root {
+            --primary-color: #1a365d;
+            --bg-color: #f7fafc;
+            --text-color: #2d3748;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 40px auto;
+            max-width: 1200px;
+            padding: 0 20px;
+            color: var(--text-color);
+            background-color: #fff;
+        }
+
+        .header-container {
+            border-bottom: 3px solid var(--primary-color);
+            padding-bottom: 15px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        h1 {
+            font-size: 28px;
+            color: var(--primary-color);
+            margin: 0 0 5px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: #4a5568;
+            margin: 0;
+        }
+
+        .btn-download {
+            background-color: #2b6cb0;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .btn-download:hover {
+            background-color: #1a365d;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: center;
+            font-size: 13px;
+            background: white;
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+            font-weight: 600;
+            text-transform: uppercase;
+            padding: 14px 10px;
+        }
+
+        th.team-col, td.team-col {
+            text-align: left;
+            padding-left: 20px;
+        }
+
+        td {
+            padding: 12px 10px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        td.team-col {
+            font-weight: bold;
+            color: #2b6cb0;
+        }
+
+        .won-highlight {
+            font-weight: bold;
+            color: #22c55e;
+        }
+
+        .footer-note {
+            margin-top: 30px;
+            font-size: 12px;
+            color: #718096;
+            border-left: 3px solid #cbd5e0;
+            padding-left: 15px;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-container">
+        <div>
+            <h1>Overall Figures</h1>
+            <div class="subtitle">Test Cricket Data Analysis & Team Standings (2021 – 2026)</div>
+        </div>
+        <button class="btn-download" onclick="generatePDF()">Download Perfect PDF</button>
+    </div>
+
+    <div class="table-responsive">
+        <table id="cricket-table">
+            <thead>
+                <tr>
+                    <th class="team-col">Team</th>
+                    <th>Span</th>
+                    <th>Mat</th>
+                    <th>Won</th>
+                    <th>Lost</th>
+                    <th>Tie</th>
+                    <th>Draw</th>
+                    <th>W/L</th>
+                    <th>Ave</th>
+                    <th>RPO</th>
+                    <th>Inns</th>
+                    <th>HS</th>
+                    <th>LS</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td class="team-col">Australia</td><td>2021-2026</td><td>48</td><td class="won-highlight">32</td><td>9</td><td>0</td><td>7</td><td>3.555</td><td>34.05</td><td>3.60</td><td>91</td><td>654</td><td>91</td></tr>
+                <tr><td class="team-col">England</td><td>2021-2026</td><td>59</td><td class="won-highlight">28</td><td>25</td><td>0</td><td>6</td><td>1.120</td><td>32.82</td><td>4.11</td><td>111</td><td>823</td><td>58</td></tr>
+                <tr><td class="team-col">India</td><td>2021-2026</td><td>49</td><td class="won-highlight">24</td><td>19</td><td>0</td><td>6</td><td>1.263</td><td>32.43</td><td>3.46</td><td>91</td><td>587</td><td>46</td></tr>
+                <tr><td class="team-col">South Africa</td><td>2021-2025</td><td>35</td><td class="won-highlight">23</td><td>10</td><td>0</td><td>2</td><td>2.300</td><td>28.89</td><td>3.34</td><td>65</td><td>625</td><td>95</td></tr>
+                <tr><td class="team-col">New Zealand</td><td>2021-2026</td><td>37</td><td class="won-highlight">18</td><td>15</td><td>0</td><td>4</td><td>1.200</td><td>33.08</td><td>3.47</td><td>69</td><td>612</td><td>62</td></tr>
+                <tr><td class="team-col">Sri Lanka</td><td>2021-2025</td><td>30</td><td class="won-highlight">14</td><td>14</td><td>0</td><td>2</td><td>1.000</td><td>33.15</td><td>3.43</td><td>55</td><td>704</td><td>42</td></tr>
+                <tr><td class="team-col">Bangladesh</td><td>2021-2026</td><td>35</td><td class="won-highlight">13</td><td>20</td><td>0</td><td>2</td><td>0.650</td><td>27.97</td><td>3.32</td><td>63</td><td>587</td><td>53</td></tr>
+                <tr><td class="team-col">Pakistan</td><td>2021-2026</td><td>32</td><td class="won-highlight">10</td><td>18</td><td>0</td><td>4</td><td>0.555</td><td>31.11</td><td>3.26</td><td>62</td><td>579</td><td>89</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="footer-note">
+        * Clean compiled data dashboard. All filter markers and overlay disruptions have been completely stripped.
+    </div>
+
+    <script>
+        function generatePDF() {
+            // Initialize jsPDF with Landscape layout for wide statistics table
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+            // Title Configuration
+            doc.setFont("Helvetica", "bold");
+            doc.setFontSize(20);
+            doc.setTextColor(26, 54, 93); // #1a365d
+            doc.text("OVERALL FIGURES", 14, 20);
+
+            // Subtitle Configuration
+            doc.setFont("Helvetica", "normal");
+            doc.setFontSize(10);
+            doc.setTextColor(74, 85, 104); // #4a5568
+            doc.text("Test Cricket Data Analysis & Team Standings | Dataset Span: 2021 - 2026", 14, 26);
+
+            // Render Table using autoTable plugin directly from the DOM Element
+            doc.autoTable({
+                html: '#cricket-table',
+                startY: 32,
+                theme: 'striped',
+                headStyles: {
+                    fillColor: [26, 54, 93],
+                    textColor: [255, 255, 255],
+                    fontSize: 10,
+                    halign: 'center'
+                },
+                bodyStyles: {
+                    fontSize: 9,
+                    textColor: [45, 55, 72],
+                    halign: 'center'
+                },
+                columnStyles: {
+                    0: { halign: 'left', fontStyle: 'bold', textColor: [43, 108, 176] } // Highlight Team column
+                },
+                styles: {
+                    cellPadding: 4,
+                    lineColor: [226, 232, 240],
+                    lineWidth: 0.2
+                },
+                didParseCell: function (data) {
+                    // Re-apply specific text logic if needed during rendering loop
+                    if (data.column.index === 3 && data.section === 'body') {
+                        data.cell.styles.fontStyle = 'bold';
+                    }
+                }
+            });
+
+            // Instant Local Save (Will never trigger 'Failed to fetch')
+            doc.save('Test_Cricket_Overall_Figures.pdf');
+        }
+    </script>
+</body>
+</html>

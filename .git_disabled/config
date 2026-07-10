@@ -1,0 +1,13 @@
+[core]
+	repositoryformatversion = 0
+	filemode = false
+	bare = false
+	logallrefupdates = true
+	symlinks = false
+	ignorecase = true
+[user]
+	name = Antigravity Dev
+	email = antigravity@gemini.local
+[remote "origin"]
+	url = https://github.com/naeem0n/ai-builder.git
+	fetch = +refs/heads/*:refs/remotes/origin/*
