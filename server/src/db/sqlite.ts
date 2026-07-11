@@ -621,6 +621,7 @@ export class SqliteDb {
     // -------------------------------------------------------
     try {
       this.db.exec(`
+        CREATE TABLE IF NOT EXISTS site_content ( key TEXT PRIMARY KEY, value TEXT );
         CREATE TABLE IF NOT EXISTS system_settings (
           id TEXT PRIMARY KEY,
           setting_key TEXT UNIQUE NOT NULL,
