@@ -1032,7 +1032,7 @@ export function downloadRentalBillPDF(opts: {
       ],
       [
         isUrdu ? "بجلی کے چارجز" : "Electricity Cost",
-        isUrdu ? `یونٹس: ${opts.electricityDetails.curr - opts.electricityDetails.prev} (${opts.electricityDetails.prev} سے ${opts.electricityDetails.curr}) @ PKR ${opts.electricityDetails.rate}/یونٹ` : `Units: ${Math.max(0, opts.electricityDetails.curr - opts.electricityDetails.prev)} (${opts.electricityDetails.prev} to ${opts.electricityDetails.curr}) @ PKR ${opts.electricityDetails.rate}/unit`,
+        isUrdu ? `یونٹس: ${opts.electricityDetails.curr} (ریڈنگ: ${opts.electricityDetails.prev} سے ${opts.electricityDetails.curr}) @ PKR ${opts.electricityDetails.rate}/یونٹ` : `Units: ${opts.electricityDetails.curr} (Reading: ${opts.electricityDetails.prev} to ${opts.electricityDetails.curr}) @ PKR ${opts.electricityDetails.rate}/unit`,
         `PKR ${opts.electricityDetails.cost.toLocaleString()}`
       ],
       [

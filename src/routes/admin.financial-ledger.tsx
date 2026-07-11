@@ -2033,7 +2033,7 @@ function UnifiedFinanceHub() {
   };
 
   const calcBillingRow = (apt: any) => {
-    const elecUnits = Math.max(0, apt.elec_curr - apt.elec_prev);
+    const elecUnits = Number(apt.elec_curr || 0);
     const elecCost = elecUnits * apt.elec_rate;
     const gasCost = Number(apt.gas_fixed_payment || 0);
     const maint = apt.fixed_maintenance || billingMaintPool;
@@ -2491,7 +2491,7 @@ function UnifiedFinanceHub() {
           .map((u: any) => {
             const prev = Number(u.elec_prev || 0);
             const curr = Number(u.elec_curr || 0);
-            const consumed = Math.max(0, curr - prev);
+            const consumed = curr;
             return {
               apartment_no: u.apartment_no,
               user_id: u.id,
@@ -2509,7 +2509,7 @@ function UnifiedFinanceHub() {
           .map((u: any) => {
             const prev = Number(u.gas_prev || 0);
             const curr = Number(u.gas_curr || 0);
-            const consumed = Math.max(0, curr - prev);
+            const consumed = curr;
             return {
               apartment_no: u.apartment_no,
               user_id: u.id,
@@ -2585,7 +2585,7 @@ function UnifiedFinanceHub() {
     setUtilElecReadings(prev => prev.map(r => {
       if (r.apartment_no !== aptNo) return r;
       const updated = { ...r, [field]: val };
-      updated.units_consumed = Math.max(0, updated.curr_reading - updated.prev_reading);
+      updated.units_consumed = updated.curr_reading;
       updated.cost_per_unit = utilElecCostPerUnit;
       updated.calculated_amount = updated.units_consumed * utilElecCostPerUnit;
       return updated;
@@ -2605,7 +2605,7 @@ function UnifiedFinanceHub() {
     setUtilGasReadings(prev => prev.map(r => {
       if (r.apartment_no !== aptNo) return r;
       const updated = { ...r, [field]: val };
-      updated.units_consumed = Math.max(0, updated.curr_reading - updated.prev_reading);
+      updated.units_consumed = updated.curr_reading;
       updated.cost_per_unit = utilGasCostPerUnit;
       updated.calculated_amount = updated.units_consumed * utilGasCostPerUnit;
       return updated;

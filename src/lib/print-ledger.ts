@@ -60,7 +60,7 @@ function buildInvoiceCopy(d: LedgerData, copyLabel: string, elecUnits: number, g
   const elecAmount = d.electricity !== undefined ? d.electricity : (elecUnits * d.elecRate);
   const gasAmount = d.gas !== undefined ? d.gas : (gasUnits * d.gasRate);
   const currentBill = d.rent + d.maintenance + elecAmount + gasAmount + 
-                      (d.water || 0) + (d.parking || 0) + (d.otherCharges || 0) + (d.stallRent || 0);
+                      (d.otherCharges || 0) + (d.stallRent || 0);
   return `
   <div class="invoice-copy">
     <div class="copy-label">${copyLabel}</div>
@@ -120,26 +120,14 @@ function buildInvoiceCopy(d: LedgerData, copyLabel: string, elecUnits: number, g
         </tr>
         <tr>
           <td><span class="item-name">⚡ Electricity</span></td>
-          <td class="dim">${elecUnits > 0 ? `${elecUnits} units (${d.elecPrev}→${d.elecCurr}) @ PKR ${d.elecRate}` : 'Monthly Electricity Consumption'}</td>
+          <td class="dim">${elecUnits > 0 ? `Prev: ${d.elecPrev} | Curr: ${d.elecCurr} | ${elecUnits} units @ PKR ${d.elecRate}` : 'Monthly Electricity Consumption'}</td>
           <td class="right">${fmtPKR(elecAmount)}</td>
         </tr>
         <tr>
           <td><span class="item-name">🔥 Gas</span></td>
-          <td class="dim">${gasUnits > 0 ? `${gasUnits} units (${d.gasPrev}→${d.gasCurr}) @ PKR ${d.gasRate}` : 'Monthly Gas Charge'}</td>
+          <td class="dim">${gasUnits > 0 ? `Prev: ${d.gasPrev} | Curr: ${d.gasCurr} | ${gasUnits} units @ PKR ${d.gasRate}` : 'Monthly Gas Charge'}</td>
           <td class="right">${fmtPKR(gasAmount)}</td>
         </tr>
-        ${d.water && d.water > 0 ? `
-        <tr>
-          <td><span class="item-name">💧 Water Charges</span></td>
-          <td class="dim">Water Supply & Operations Fee</td>
-          <td class="right">${fmtPKR(d.water)}</td>
-        </tr>` : ''}
-        ${d.parking && d.parking > 0 ? `
-        <tr>
-          <td><span class="item-name">🚗 Parking Charges</span></td>
-          <td class="dim">Dedicated Parking Space Fee</td>
-          <td class="right">${fmtPKR(d.parking)}</td>
-        </tr>` : ''}
         ${d.otherCharges && d.otherCharges > 0 ? `
         <tr>
           <td><span class="item-name">📝 Other Charges</span></td>
@@ -201,8 +189,8 @@ function buildInvoiceCopy(d: LedgerData, copyLabel: string, elecUnits: number, g
 }
 
 export function printLedgerStatement(d: LedgerData) {
-  const elecUnits = d.elecUnits ?? Math.max(0, (d.elecCurr ?? 0) - (d.elecPrev ?? 0));
-  const gasUnits  = d.gasUnits  ?? Math.max(0, (d.gasCurr  ?? 0) - (d.gasPrev  ?? 0));
+  const elecUnits = d.elecUnits ?? (d.elecCurr ?? 0);
+  const gasUnits  = d.gasUnits  ?? (d.gasCurr  ?? 0);
   const openBal   = d.openingBalance ?? d.arrears ?? 0;
 
   const clientCopy = buildInvoiceCopy(d, "CLIENT COPY", elecUnits, gasUnits, openBal);
