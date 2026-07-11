@@ -2188,8 +2188,10 @@ function UnifiedFinanceHub() {
 
   // --- REFUND HANDLER ---
   const handleRefundFromRegistry = async (row: any, type: "RI" | "RV" | "PV") => {
-    const reason = window.prompt(`Enter refund reason for ${type} — ${row.unit || row.name}:`);
-    if (reason === null) return; // cancelled
+    if (!window.confirm(`Are you sure you want to refund ${type} — ${row.unit || row.name}? This cannot be undone.`)) {
+      return;
+    }
+    const reason = `Refunded by Admin`;
     const amount = type === "RI" ? (row.total || 0) : (row.amount || row.total || 0);
     if (!amount || amount <= 0) {
       toast.error("Amount is zero — cannot process refund.");
@@ -4702,7 +4704,7 @@ function UnifiedFinanceHub() {
                       <td className="p-2 border-r border-slate-800 text-slate-300">{row.rvDate}</td>
                       <td className="p-2 border-r border-slate-800 text-cyan-400 font-black text-[11px]">{row.balance.toLocaleString()}</td>
                       <td className="p-2 text-center whitespace-nowrap flex items-center justify-center gap-1">
-                        <button
+                        {/* <button
                           onClick={() => {
                             setEditingInvoice({
                               id: row.id || "",
@@ -4720,7 +4722,7 @@ function UnifiedFinanceHub() {
                           className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-0.5 rounded text-[8px] font-bold uppercase transition flex items-center gap-0.5 cursor-pointer"
                         >
                           <Pencil className="h-2.5 w-2.5" /> Edit
-                        </button>
+                        </button> */}
                         <button
                           onClick={() => handlePrintInvoiceFromRegistry(row)}
                           className="bg-slate-800 hover:bg-slate-700 border border-slate-700/60 text-slate-300 hover:text-white px-2 py-0.5 rounded text-[8px] font-bold uppercase transition flex items-center gap-0.5 cursor-pointer"
