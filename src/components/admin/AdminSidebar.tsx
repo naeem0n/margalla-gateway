@@ -117,6 +117,15 @@ export function AdminSidebar() {
         <Link to="/" className="flex items-center gap-3 px-3 py-2 text-sm text-sidebar-foreground/70 hover:text-primary rounded-md">
           <DoorOpen className="h-4 w-4" /> {t("exitToSite")}
         </Link>
+        {!isDesktopApp() && (
+          <a
+            href="/downloads/setup.exe"
+            download
+            className="w-full flex items-center gap-3 px-3 py-2 text-sm text-green-600/90 hover:bg-green-600/10 hover:text-green-500 rounded-md transition-colors"
+          >
+            <FolderArchive className="h-4 w-4" /> Download Desktop ERP
+          </a>
+        )}
         <button
           type="button"
           onClick={handleLogout}
