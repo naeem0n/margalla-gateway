@@ -14,6 +14,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { isDesktopApp } from "@/lib/api-client";
 
 export const Route = createFileRoute("/welcome")({
+  ssr: false,
   head: () => ({
     meta: [
       { title: "Margalla Gateway — Luxury Living Redefined" },

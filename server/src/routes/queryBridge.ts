@@ -262,6 +262,8 @@ router.post("/query-bridge", authRequired, async (req, res) => {
           
           let col = f.column;
           let val = f.value;
+          if (typeof val === "boolean") val = val ? 1 : 0;
+          
           if (mappedTable === "ledger_entries") {
             if (col === "account_id" || col === "resident_id") col = "ledger_entries.user_id";
             else if (col === "account_type") col = "ledger_entries.entry_type";

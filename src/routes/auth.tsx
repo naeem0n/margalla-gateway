@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { isDesktopApp } from "@/lib/api-client";
 
 export const Route = createFileRoute("/auth")({
+  ssr: false,
   beforeLoad: () => {
     if (!isDesktopApp()) {
       throw redirect({ to: "/" });
