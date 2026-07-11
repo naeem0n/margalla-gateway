@@ -91,9 +91,17 @@ function RootComponent() {
 
   useEffect(() => {
     const handleGlobalError = (event: ErrorEvent) => {
-      console.error("Global window error caught:", event.error);
       const err = event.error || new Error(event.message || "Unknown error");
-      toast.error(`A system error occurred: ${err.message || err}`, {
+      
+      // Suppress React hydration mismatch errors from showing scary system alerts
+      const errMsg = String(err.message || err);
+      if (errMsg.includes("Hydration failed") || errMsg.includes("Minified React error #418") || errMsg.includes("Minified React error #425")) {
+        console.warn("Suppressed hydration error toast:", errMsg);
+        return;
+      }
+
+      console.error("Global window error caught:", event.error);
+      toast.error(`A system error occurred: ${errMsg}`, {
         duration: 8000,
         action: {
           label: "Report to Support",
