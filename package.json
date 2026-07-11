@@ -8,7 +8,7 @@
   "scripts": {
     "start": "electron .",
     "dev": "vite",
-    "build": "vite build && node bundle_server.js",
+    "build": "vite build && node bundle_server.js && node -e \"require('fs').cpSync('dist/client', 'dist', {recursive:true})\"",
     "build:electron": "node scripts/build_packaged.js"
   },
   "dependencies": {
