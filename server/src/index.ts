@@ -211,9 +211,11 @@ async function main() {
 
   startSyncInterval();
   startAutoBackupSchedule();
-  app.listen(config.port, () => {
-    console.log(`Margalla Gateway API running on http://localhost:${config.port} [${config.dbMode}]`);
-  });
+  if (!process.env.VERCEL) {
+    app.listen(config.port, () => {
+      console.log(`Margalla Gateway API running on http://localhost:${config.port} [${config.dbMode}]`);
+    });
+  }
 }
 
 main().catch((e) => {

@@ -71,14 +71,14 @@ function AuthPage() {
 
       <main className="mx-auto flex min-h-[calc(100vh-96px)] w-full max-w-5xl flex-col justify-center py-12">
         <div className="mb-10 max-w-2xl">
-          <p className="mb-3 text-xs tracking-[0.3em] text-primary">DEVELOPMENT ACCESS</p>
+          <p className="mb-3 text-xs tracking-[0.3em] text-primary">PORTAL ACCESS</p>
           <h1 className="font-display text-4xl leading-tight md:text-6xl">
             {lang === "ur" ? "Portal choose karein aur direct open karein" : "Choose a portal and open it directly"}
           </h1>
           <p className="mt-4 text-lg text-muted-foreground">
             {lang === "ur"
-              ? "Abhi demo/development mode mein password aur ID hata diye gaye hain. Final launch par login wapas add kar denge."
-              : "Password and ID checks are removed for demo/development mode. Login will be added back before final launch."}
+              ? "Resident portal open karein aur apna ID/Password daal kar account access karein."
+              : "Open the resident portal and enter your ID/Password to access your account."}
           </p>
         </div>
 

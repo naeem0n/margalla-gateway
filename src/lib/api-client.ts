@@ -10,7 +10,7 @@ export function getApiBase(): string {
   if (typeof window !== "undefined" && window.margallaDesktop?.apiBase) {
     return window.margallaDesktop.apiBase;
   }
-  return import.meta.env.VITE_API_URL ?? "http://localhost:3847/api";
+  return import.meta.env.VITE_API_URL ?? "/api";
 }
 
 export function getToken(): string | null {
@@ -25,7 +25,7 @@ export function setToken(token: string | null) {
 }
 
 export function isDesktopApp(): boolean {
-  return true;
+  return typeof window !== "undefined" && !!window.margallaDesktop;
 }
 
 export async function apiFetch<T = unknown>(

@@ -11,7 +11,7 @@ export const Route = createFileRoute("/resident")({
         (key) => key.startsWith("sb-") && key.endsWith("-auth-token")
       );
       if (!token && !residentGate && !hasSupabaseToken) {
-        throw redirect({ to: "/welcome" });
+        throw redirect({ to: "/resident/login" });
       }
     }
   },
