@@ -40,10 +40,18 @@ export async function apiFetch<T = unknown>(
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
   const url = `${getApiBase()}${path}`;
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
+  let response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers,
+    });
+  } catch (err: any) {
+    if (err instanceof TypeError && (err.message.includes("fetch") || err.message.includes("NetworkError"))) {
+      throw new Error("Local Admin Server is offline or not connected to the internet. Residents cannot view data until Admin PC is live and connected via Tunnel.");
+    }
+    throw err;
+  }
 
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({}));
