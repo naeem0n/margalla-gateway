@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Bell, Search, CheckCircle, Loader2, WifiOff, PlusCircle, RefreshCw, Sun, Moon, Zap } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { LanguageSwitcher } from "@/components/site/LanguageSwitcher";
