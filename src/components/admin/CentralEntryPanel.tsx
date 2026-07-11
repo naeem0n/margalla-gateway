@@ -818,46 +818,22 @@ const resetForm = () => {
       else if (activeTab === "RI") {
         if (totalReceivable <= 0) throw new Error("Rental Invoice total amount must be greater than zero");
 
-        // 1. Post ledger debit for rent & utilities
-        const desc = `[Rental Invoice RI-${riNo}] Rent: PKR ${riBaseRent} | Maint: PKR ${riMaintenance} | Elec: PKR ${elecTotal} (${elecUnits} units: ${riElecPrev} to ${riElecCurr}) | Gas: PKR ${riGasBill} | Parking: PKR ${riParkingFee} (${riParkSpots} extra spots) | Duration: ${riDurationFrom} to ${riDurationTo}`;
-        await apiFetch<any>("/ledger", {
+        // 1. Post Rental Invoice via Universal Accounting API
+        await apiFetch<any>("/accounting/ri", {
           method: "POST",
           body: JSON.stringify({
-            user_id: selectedRes.id,
-            entry_date: riDate,
-            entry_type: "rent",
-            description: desc,
-            debit: totalReceivable,
-            credit: 0,
-            voucher_no: riNo.startsWith("RI-") ? riNo : `RI-${riNo}`
-          })
-        });
-
-        // 2. Insert into invoices table
-        await apiFetch('/query-bridge', {
-          method: 'POST',
-          body: JSON.stringify({
-            table: 'invoices',
-            action: 'insert',
-            data: {
-              invoice_no: riNo,
-              date: riDate,
-              tenant_id: selectedRes.id,
-              apartment_no: riFlatNo,
-              prev_reading: Number(riElecPrev) || 0,
-              curr_reading: Number(riElecCurr) || 0,
-              electricity_amount: elecTotal,
-              gas_charges: Number(riGasBill) || 0,
-              flat_rent: Number(riBaseRent) || 0,
-              maintenance_charges: Number(riMaintenance) || 0,
-              parking_charges: riParkingFee,
-              previous_arrears: Number(selectedRes.outstanding_balance || 0),
-              total_bill_amount: totalReceivable,
-              amount_received: 0,
-              current_balance: totalReceivable + Number(selectedRes.outstanding_balance || 0),
-              units_consumed: elecUnits,
-              grand_total: totalReceivable + Number(selectedRes.outstanding_balance || 0)
-            }
+            invoice_no: riNo,
+            date: riDate,
+            tenant_id: selectedRes.id,
+            apartment_no: riFlatNo,
+            rent: Number(riBaseRent) || 0,
+            maintenance: Number(riMaintenance) || 0,
+            electricity: elecTotal,
+            gas: Number(riGasBill) || 0,
+            water: 0,
+            parking: riParkingFee,
+            other_charges: 0,
+            previous_arrears: Number(selectedRes.outstanding_balance || 0)
           })
         });
 
@@ -901,6 +877,8 @@ const resetForm = () => {
           });
         }
 
+        const desc = `[Rental Invoice RI-${riNo}] Rent: PKR ${riBaseRent} | Maint: PKR ${riMaintenance} | Elec: PKR ${elecTotal} (${elecUnits} units: ${riElecPrev} to ${riElecCurr}) | Gas: PKR ${riGasBill} | Parking: PKR ${riParkingFee} (${riParkSpots} extra spots) | Duration: ${riDurationFrom} to ${riDurationTo}`;
+        
         setLastVoucher({
           type: "Rental Invoice",
           voucher_no: riNo,
