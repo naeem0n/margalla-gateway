@@ -198,8 +198,8 @@ async function updateTenantLedger(db: any, tenant_id: string, entry_id: string, 
 
   // Update user outstanding balance
   await db.run(
-    `UPDATE users SET outstanding_balance = ?, updated_at = ? WHERE id = ?`,
-    [balance_after, ts, tenant_id]
+    `UPDATE users SET outstanding_balance = ? WHERE id = ?`,
+    [balance_after, tenant_id]
   );
 }
 

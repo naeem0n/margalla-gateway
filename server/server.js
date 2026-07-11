@@ -43292,6 +43292,16 @@ async function createJournalEntry(db2, data) {
     );
     if (tenant_id) {
       await updateTenantLedger(db2, tenant_id, entry_id, amount, voucher_no.startsWith("RV") ? "credit" : "debit");
+      let legacy_type = "other";
+      if (voucher_no.startsWith("RI")) legacy_type = "rent";
+      else if (voucher_no.startsWith("RV")) legacy_type = "rent";
+      const type = voucher_no.startsWith("RV") ? "credit" : "debit";
+      const userRec = await db2.queryOne(`SELECT outstanding_balance FROM users WHERE id = ?`, [tenant_id]);
+      await db2.run(
+        `INSERT INTO ledger_entries (id, user_id, entry_date, entry_type, description, debit, credit, balance_after, voucher_no, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [newId(), tenant_id, entry_date, legacy_type, description, type === "debit" ? amount : 0, type === "credit" ? amount : 0, userRec?.outstanding_balance || 0, voucher_no, ts, ts]
+      );
     }
     return { entry_id, voucher_no, debit_line_id, credit_line_id };
   } catch (error) {
@@ -43475,8 +43485,8 @@ router15.post("/ri", authRequired, requireAccountingRole, async (req, res) => {
       apartment_no
     });
     await db2.run(
-      `INSERT INTO invoices (invoice_no, date, tenant_id, apartment_no, flat_rent, maintenance_charges, electricity_amount, gas_charges, water_charges, parking_charges, other_charges, previous_arrears, total_bill_amount, grand_total, amount_received, current_balance, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, datetime('now'), datetime('now'))`,
+      `INSERT INTO invoices (invoice_no, date, tenant_id, apartment_no, flat_rent, maintenance_charges, electricity_amount, gas_charges, water_charges, parking_charges, other_charges, previous_arrears, total_bill_amount, grand_total, amount_received, current_balance)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`,
       [cleanInvoiceNo, date, tenant_id, apartment_no, rent || 0, maintenance || 0, electricity || 0, gas || 0, water || 0, parking || 0, other_charges || 0, previous_arrears || 0, total_bill, grand_total, grand_total]
     );
     res.json({
