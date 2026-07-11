@@ -1779,7 +1779,7 @@ const resetForm = () => {
                   className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black h-11 border border-blue-500 uppercase tracking-widest text-[10px] cursor-pointer shadow-lg"
                 >
                   <Landmark className="h-4 w-4 mr-1 text-white" />
-                  {saving ? "Saving..." : "Save to Ledger"}
+                  {saving ? "Saving..." : "Save"}
                 </Button>
                 <Button
                   onClick={() => handlePrintOrSave("print", "a5")}
