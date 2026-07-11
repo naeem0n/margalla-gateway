@@ -997,7 +997,7 @@ const resetForm = () => {
                   <Printer className="h-4 w-4 text-amber-400" /> Print A4 (×2)
                 </Button>
                 <Button onClick={() => handlePrintOrSave("pdf", "a5")} className="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-[10px] uppercase font-bold py-3 rounded-lg flex flex-col items-center justify-center gap-1 cursor-pointer">
-                  <Download className="h-4 w-4 text-blue-400" /> Save PDF
+                  <Download className="h-4 w-4 text-blue-400" /> Download PDF
                 </Button>
                 <Button onClick={handleWhatsAppShare} className="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-[10px] uppercase font-bold py-3 rounded-lg flex flex-col items-center justify-center gap-1 cursor-pointer">
                   <MessageSquare className="h-4 w-4 text-emerald-500" /> WhatsApp
@@ -1771,7 +1771,16 @@ const resetForm = () => {
               )}
 
               {/* Sticky Command Action Bar */}
-              <div className="sticky bottom-0 bg-slate-950 pt-4 pb-1 border-t border-slate-900 grid grid-cols-5 gap-2">
+              <div className="sticky bottom-0 bg-slate-950 pt-4 pb-1 border-t border-slate-900 grid grid-cols-6 gap-2">
+                <Button
+                  type="button"
+                  onClick={handlePostDatabase}
+                  disabled={saving}
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black h-11 border border-blue-500 uppercase tracking-widest text-[10px] cursor-pointer shadow-lg"
+                >
+                  <Landmark className="h-4 w-4 mr-1 text-white" />
+                  {saving ? "Saving..." : "Save to Ledger"}
+                </Button>
                 <Button
                   onClick={() => handlePrintOrSave("print", "a5")}
                   className="bg-slate-900 hover:bg-slate-800 text-white font-bold h-11 border border-slate-800 uppercase tracking-wider text-[10px] cursor-pointer"
@@ -1791,7 +1800,7 @@ const resetForm = () => {
                   className="bg-slate-900 hover:bg-slate-800 text-white font-bold h-11 border border-slate-800 uppercase tracking-wider text-[10px] cursor-pointer"
                 >
                   <Download className="h-4 w-4 mr-1 text-blue-500" />
-                  Save PDF
+                  Download PDF
                 </Button>
                 <Button
                   type="button"

@@ -11,7 +11,6 @@ CREATE TABLE IF NOT EXISTS users (
   role TEXT NOT NULL CHECK (role IN ('admin', 'resident', 'thirdparty')),
   permissions_json TEXT DEFAULT '{}',
   is_active INTEGER DEFAULT 1,
-  force_password_change INTEGER DEFAULT 1,
   cnic TEXT,
   rent_amount REAL DEFAULT 0,
   security_deposit REAL DEFAULT 0,
