@@ -573,6 +573,9 @@ function UnifiedFinanceHub() {
             rent: Number(riBaseRent) || 0,
             maintenance: Number(riMaintenance) || 0,
             electricity: riElecTotal,
+            prev_reading: Number(riElecPrev) || 0,
+            curr_reading: Number(riElecCurr) || 0,
+            units_consumed: riElecUnits,
             gas: Number(riGasBill) || 0,
             water: 0,
             parking: riParkingFee,
@@ -1417,10 +1420,13 @@ function UnifiedFinanceHub() {
               remarks: isRV ? "Payment Voucher" : "Monthly Utility Bill",
               rentedOn: item.date || "—",
               rent: Number(item.flat_rent || 0),
-              security: Number(item.security_charges || item.tenant_security || 0),
+              security: Number(item.maintenance_charges || 0),
               commission: 0,
               electricity: Number(item.electricity_amount || 0),
               gas: Number(item.gas_charges || 0),
+              water: Number(item.water_charges || 0),
+              parking: Number(item.parking_charges || 0),
+              otherCharges: Number(item.other_charges || 0),
               pending: Number(item.previous_arrears || 0),
               total: Number(item.total_bill_amount || 0),
               received: Number(item.amount_received || 0),
@@ -1430,6 +1436,10 @@ function UnifiedFinanceHub() {
               balance: Number(item.current_balance || 0),
               refund: 0,
               adjustment: 0,
+              elecPrev: Number(item.prev_reading || 0),
+              elecCurr: Number(item.curr_reading || 0),
+              elecUnits: Number(item.units_consumed || 0),
+              elecRate: Number(item.units_consumed) > 0 ? (Number(item.electricity_amount || 0) / Number(item.units_consumed)) : 0,
               client_id: resident?.client_id || "",
               tenant_id: item.tenant_id,
               id: item.id,
@@ -2115,22 +2125,26 @@ function UnifiedFinanceHub() {
 
   const handlePrintInvoiceFromRegistry = (row: any) => {
     printLedgerStatement({
-      invoiceNo: row.rvNo !== "—" ? row.rvNo : `MGT-${row.unit}-${Date.now().toString().slice(-6)}`,
+      invoiceNo: row.invoice_no || (row.rvNo !== "—" ? row.rvNo : `MGT-${row.unit}-${Date.now().toString().slice(-6)}`),
       billingPeriod: row.rentedOn,
       issueDate: row.rentedOn,
       tenantName: row.name || 'Resident',
       apartmentNo: row.unit || 'N/A',
       rent: row.rent,
       maintenance: row.security,
-      elecPrev: 0,
-      elecCurr: 0,
-      elecUnits: 0,
-      elecRate: 0,
+      elecPrev: row.elecPrev || 0,
+      elecCurr: row.elecCurr || 0,
+      elecUnits: row.elecUnits || 0,
+      elecRate: row.elecRate || 0,
       gasPrev: 0,
       gasCurr: 0,
       gasUnits: 0,
       gasRate: 0,
-      gas: row.gas + row.electricity,
+      gas: row.gas,
+      electricity: row.electricity,
+      water: row.water,
+      parking: row.parking,
+      otherCharges: row.otherCharges,
       openingBalance: row.pending,
       totalBill: row.total,
       arrears: row.pending,
@@ -2378,8 +2392,31 @@ function UnifiedFinanceHub() {
     try {
       for (const apt of billingApts) {
         const { elecUnits, elecCost, gasUnits, gasCost, maint, stall, openBal, currentBill, grossPayable, netDue } = calcBillingRow(apt);
-        const invoiceNo = `MGT-${apt.apartment_no}-${Date.now()}`;
-        // Update user readings, fixed gas, maintenance, AND outstanding_balance in the users table
+        const invoiceNo = `MGT-${apt.apartment_no}-${Date.now().toString().slice(-6)}`;
+        
+        // 1. Post Rental Invoice via Universal Accounting API (handles ledger, double-entry, invoice registry, outstanding balance)
+        await apiFetch("/accounting/ri", {
+          method: "POST",
+          body: JSON.stringify({
+            invoice_no: invoiceNo,
+            date: new Date().toISOString().slice(0, 10),
+            tenant_id: apt.id,
+            apartment_no: apt.apartment_no,
+            rent: Number(apt.rent_amount) || 0,
+            maintenance: Number(maint) || 0,
+            electricity: Number(elecCost) || 0,
+            prev_reading: Number(apt.elec_prev) || 0,
+            curr_reading: Number(apt.elec_curr) || 0,
+            units_consumed: Number(elecUnits) || 0,
+            gas: Number(gasCost) || 0,
+            water: 0,
+            parking: Number(apt.parking_charges || 0),
+            other_charges: 0,
+            previous_arrears: Number(openBal) || 0
+          })
+        });
+
+        // 2. Update user parameters in users table
         await apiFetch('/query-bridge', { 
           method: 'POST', 
           body: JSON.stringify({ 
@@ -2393,19 +2430,10 @@ function UnifiedFinanceHub() {
               gas_fixed_payment: apt.gas_fixed_payment, 
               fixed_maintenance: maint, 
               stall_rent: apt.stall_rent, 
-              outstanding_balance: netDue, 
               last_billing_date: new Date().toISOString() 
             } 
           }) 
         });
-        // Insert invoice
-        await apiFetch('/query-bridge', { method: 'POST', body: JSON.stringify({ table: 'invoices', action: 'insert', data: { invoice_no: invoiceNo, date: new Date().toISOString().slice(0,10), tenant_id: apt.id, apartment_no: apt.apartment_no, prev_reading: apt.elec_prev, curr_reading: apt.elec_curr, units_consumed: elecUnits, electricity_amount: elecCost, gas_charges: gasCost, flat_rent: apt.rent_amount, maintenance_charges: maint, previous_arrears: openBal, total_bill_amount: currentBill, amount_received: Number(apt.amount_received || 0), current_balance: netDue, grand_total: grossPayable, consolidated_total: apt.rent_amount + maint } }) });
-        // Post to ledger
-        const descParts = [`Rent: PKR ${apt.rent_amount.toLocaleString()}`];
-        if (elecCost > 0) descParts.push(`Elec: PKR ${elecCost.toLocaleString()}`);
-        if (gasCost > 0) descParts.push(`Gas: PKR ${gasCost.toLocaleString()}`);
-        if (maint > 0) descParts.push(`Maint: PKR ${maint.toLocaleString()}`);
-        await apiFetch('/ledger', { method: 'POST', body: JSON.stringify({ user_id: apt.id, entry_date: new Date().toISOString().slice(0,10), entry_type: 'rent', description: `Monthly Invoice — ${new Date().toLocaleDateString('en-PK', { month: 'long', year: 'numeric' })} (${descParts.join(', ')})`, debit: currentBill, credit: Number(apt.amount_received || 0) }) });
       }
       toast.success('✅ All bills posted successfully!');
       setBillingMsg('✅ All bills posted to ledger and invoices registry.');

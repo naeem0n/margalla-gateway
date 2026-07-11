@@ -377,7 +377,7 @@ router.post("/ri", authRequired, requireAccountingRole, async (req, res) => {
       description,
       debit_account: "1200",  // Accounts Receivable
       credit_account: "4000", // Revenue/Income
-      amount: grand_total,
+      amount: total_bill,
       reference: cleanInvoiceNo,
       tenant_id,
       apartment_no

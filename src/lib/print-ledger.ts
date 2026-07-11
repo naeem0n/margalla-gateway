@@ -24,6 +24,10 @@ export interface LedgerData {
   cashReceived: number;
   netArrears: number;
   stallRent?: number;
+  electricity?: number;
+  water?: number;
+  parking?: number;
+  otherCharges?: number;
 }
 
 const fmtPKR = (n: number) => `PKR ${Math.round(n).toLocaleString()}`;
@@ -53,7 +57,10 @@ function iframePrint(html: string) {
 
 /** Build one A5-sized invoice copy block as an HTML string */
 function buildInvoiceCopy(d: LedgerData, copyLabel: string, elecUnits: number, gasUnits: number, openBal: number): string {
-  const currentBill = d.rent + d.maintenance + (elecUnits * d.elecRate) + (gasUnits * d.gasRate) + (d.stallRent || 0);
+  const elecAmount = d.electricity !== undefined ? d.electricity : (elecUnits * d.elecRate);
+  const gasAmount = d.gas !== undefined ? d.gas : (gasUnits * d.gasRate);
+  const currentBill = d.rent + d.maintenance + elecAmount + gasAmount + 
+                      (d.water || 0) + (d.parking || 0) + (d.otherCharges || 0) + (d.stallRent || 0);
   return `
   <div class="invoice-copy">
     <div class="copy-label">${copyLabel}</div>
@@ -113,14 +120,32 @@ function buildInvoiceCopy(d: LedgerData, copyLabel: string, elecUnits: number, g
         </tr>
         <tr>
           <td><span class="item-name">⚡ Electricity</span></td>
-          <td class="dim">${elecUnits} units (${d.elecPrev}→${d.elecCurr}) @ PKR ${d.elecRate}</td>
-          <td class="right">${fmtPKR(elecUnits * d.elecRate)}</td>
+          <td class="dim">${elecUnits > 0 ? `${elecUnits} units (${d.elecPrev}→${d.elecCurr}) @ PKR ${d.elecRate}` : 'Monthly Electricity Consumption'}</td>
+          <td class="right">${fmtPKR(elecAmount)}</td>
         </tr>
         <tr>
           <td><span class="item-name">🔥 Gas</span></td>
-          <td class="dim">${gasUnits > 0 ? `${gasUnits} units (${d.gasPrev}→${d.gasCurr}) @ PKR ${d.gasRate}` : 'Fixed Monthly Gas Charge'}</td>
-          <td class="right">${fmtPKR(d.gas)}</td>
+          <td class="dim">${gasUnits > 0 ? `${gasUnits} units (${d.gasPrev}→${d.gasCurr}) @ PKR ${d.gasRate}` : 'Monthly Gas Charge'}</td>
+          <td class="right">${fmtPKR(gasAmount)}</td>
         </tr>
+        ${d.water && d.water > 0 ? `
+        <tr>
+          <td><span class="item-name">💧 Water Charges</span></td>
+          <td class="dim">Water Supply & Operations Fee</td>
+          <td class="right">${fmtPKR(d.water)}</td>
+        </tr>` : ''}
+        ${d.parking && d.parking > 0 ? `
+        <tr>
+          <td><span class="item-name">🚗 Parking Charges</span></td>
+          <td class="dim">Dedicated Parking Space Fee</td>
+          <td class="right">${fmtPKR(d.parking)}</td>
+        </tr>` : ''}
+        ${d.otherCharges && d.otherCharges > 0 ? `
+        <tr>
+          <td><span class="item-name">📝 Other Charges</span></td>
+          <td class="dim">Miscellaneous Services Fee</td>
+          <td class="right">${fmtPKR(d.otherCharges)}</td>
+        </tr>` : ''}
         ${d.stallRent && d.stallRent > 0 ? `
         <tr>
           <td><span class="item-name">🏪 Stall Rent</span></td>
