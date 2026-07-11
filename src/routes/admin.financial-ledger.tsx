@@ -518,35 +518,17 @@ function UnifiedFinanceHub() {
         if (amt <= 0) throw new Error("Amount must be greater than zero");
         const targetUserId = activeRes ? activeRes.id : "system";
 
-        // 1. Post to ledger entries
-        const desc = `[RV-${rvNo}] Received from ${rvFrom} on account of ${rvPurpose}. Pay Mode: ${rvPayMode}. ${rvRemarks}`;
-        await apiFetch("/ledger", {
+        // Post Receipt Voucher via Universal Accounting API
+        await apiFetch("/accounting/rv", {
           method: "POST",
           body: JSON.stringify({
-            user_id: targetUserId,
-            entry_date: rvDate,
-            entry_type: "payment",
-            description: desc,
-            debit: 0,
-            credit: amt
-          })
-        });
-
-        // 2. Insert into receipt_vouchers
-        await apiFetch('/query-bridge', {
-          method: 'POST',
-          body: JSON.stringify({
-            table: 'receipt_vouchers',
-            action: 'insert',
-            data: {
-              voucher_no: rvNo,
-              date: rvDate,
-              tenant_id: targetUserId,
-              amount: amt,
-              payment_method: rvPayMode,
-              reference_no: rvAccountNo,
-              remarks: rvRemarks
-            }
+            voucher_no: rvNo,
+            date: rvDate,
+            tenant_id: targetUserId,
+            apartment_no: rvAccountNo,
+            amount: amt,
+            payment_method: rvPayMode,
+            reference_no: rvRemarks
           })
         });
         toast.success("Receipt Voucher posted successfully!");
@@ -557,34 +539,18 @@ function UnifiedFinanceHub() {
         if (amt <= 0) throw new Error("Voucher amount must be greater than zero");
         const targetUserId = activeRes ? activeRes.id : "system";
 
-        // 1. Post to ledger
+        // Post Payment Voucher via Universal Accounting API
         const desc = `[PV-${pvNo}] Paid to ${pvPaidTo}. Method: ${pvPayMethod}. Breakdown: ${pvRows.map(r => `Notice: ${r.noticeAmount}, Adj: ${r.adjustment}, Net: ${r.netAmount}${r.remarks ? ` (${r.remarks})` : ""}`).join(' | ')}`;
-        await apiFetch("/ledger", {
+        await apiFetch("/accounting/pv", {
           method: "POST",
           body: JSON.stringify({
-            user_id: targetUserId,
-            entry_date: pvDate,
-            entry_type: "other",
-            description: desc,
-            debit: amt,
-            credit: 0
-          })
-        });
-
-        // 2. Insert into expenses
-        await apiFetch('/query-bridge', {
-          method: 'POST',
-          body: JSON.stringify({
-            table: 'expenses',
-            action: 'insert',
-            data: {
-              category: "payment_voucher",
-              amount: amt,
-              description: desc,
-              expense_date: pvDate,
-              paid_from_acco_id: "CASH",
-              expense_acco_id: "PV_EXPENSE"
-            }
+            voucher_no: pvNo,
+            date: pvDate,
+            tenant_id: targetUserId,
+            apartment_no: "N/A",
+            amount: amt,
+            payment_method: pvPayMethod,
+            reference_no: desc
           })
         });
         toast.success("Payment Voucher posted successfully!");
@@ -596,44 +562,39 @@ function UnifiedFinanceHub() {
         }
         if (riTotalReceivable <= 0) throw new Error("Total Receivable must be greater than zero");
 
-        // 1. Post to ledger
-        const desc = `[Rental Invoice RI-${riNo}] Rent: PKR ${riBaseRent} | Maint: PKR ${riMaintenance} | Elec: PKR ${riElecTotal} (${riElecUnits} units: ${riElecPrev} to ${riElecCurr}) | Gas: PKR ${riGasBill} | Parking: PKR ${riParkingFee} (${riParkSpots} extra spots) | Duration: ${riDurationFrom} to ${riDurationTo}`;
-        await apiFetch("/ledger", {
+        // 1. Post Rental Invoice via Universal Accounting API
+        await apiFetch("/accounting/ri", {
           method: "POST",
           body: JSON.stringify({
-            user_id: activeRes.id,
-            entry_date: riDate,
-            entry_type: "rent",
-            description: desc,
-            debit: riTotalReceivable,
-            credit: 0
+            invoice_no: riNo,
+            date: riDate,
+            tenant_id: activeRes.id,
+            apartment_no: riFlatNo,
+            rent: Number(riBaseRent) || 0,
+            maintenance: Number(riMaintenance) || 0,
+            electricity: riElecTotal,
+            gas: Number(riGasBill) || 0,
+            water: 0,
+            parking: riParkingFee,
+            other_charges: 0,
+            previous_arrears: Number(activeRes.outstanding_balance || 0)
           })
         });
-
-        // 2. Insert into invoices
-        await apiFetch('/query-bridge', {
-          method: 'POST',
+        
+        // 2. Update resident default parameters on users table
+        await apiFetch("/query-bridge", {
+          method: "POST",
           body: JSON.stringify({
-            table: 'invoices',
-            action: 'insert',
+            table: "users",
+            action: "update",
+            filters: [{ column: "id", value: activeRes.id }],
             data: {
-              invoice_no: riNo,
-              date: riDate,
-              tenant_id: activeRes.id,
-              apartment_no: riFlatNo,
-              prev_reading: Number(riElecPrev) || 0,
-              curr_reading: Number(riElecCurr) || 0,
-              electricity_amount: riElecTotal,
-              gas_charges: Number(riGasBill) || 0,
-              flat_rent: Number(riBaseRent) || 0,
+              full_name: riTenantName,
+              phone: riContact,
+              rent_amount: Number(riBaseRent) || 0,
               maintenance_charges: Number(riMaintenance) || 0,
-              parking_charges: riParkingFee,
-              previous_arrears: Number(activeRes.outstanding_balance || 0),
-              total_bill_amount: riTotalReceivable,
-              amount_received: 0,
-              current_balance: riTotalReceivable + Number(activeRes.outstanding_balance || 0),
-              units_consumed: riElecUnits,
-              grand_total: riTotalReceivable + Number(activeRes.outstanding_balance || 0)
+              elec_prev: Number(riElecCurr) || 0,
+              elec_curr: Number(riElecCurr) || 0
             }
           })
         });

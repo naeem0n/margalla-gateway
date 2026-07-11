@@ -424,7 +424,7 @@ export function printLedgerStatement(d: LedgerData) {
     /* ── PRINT STYLES ── */
     @media print {
       @page {
-        size: A5 portrait;
+        size: A4 portrait;
         margin: 5mm;
       }
 

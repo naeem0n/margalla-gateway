@@ -334,19 +334,22 @@ router.post("/pv", authRequired, requireAccountingRole, async (req, res) => {
 router.post("/ri", authRequired, requireAccountingRole, async (req, res) => {
   try {
     const db = await getDb();
-    const {
-      invoice_no,
-      date,
-      tenant_id,
-      apartment_no,
-      rent,
-      maintenance,
-      electricity,
-      gas,
-      water,
-      parking,
-      other_charges,
-      previous_arrears
+    const { 
+      invoice_no, 
+      date, 
+      tenant_id, 
+      apartment_no, 
+      rent, 
+      maintenance, 
+      electricity, 
+      prev_reading, 
+      curr_reading, 
+      units_consumed, 
+      gas, 
+      water, 
+      parking, 
+      other_charges, 
+      previous_arrears 
     } = req.body;
 
     if (!invoice_no || !date || !tenant_id) {
@@ -382,9 +385,9 @@ router.post("/ri", authRequired, requireAccountingRole, async (req, res) => {
 
     // Insert into invoices table
     await db.run(
-      `INSERT INTO invoices (invoice_no, date, tenant_id, apartment_no, flat_rent, maintenance_charges, electricity_amount, gas_charges, water_charges, parking_charges, other_charges, previous_arrears, total_bill_amount, grand_total, amount_received, current_balance)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`,
-      [cleanInvoiceNo, date, tenant_id, apartment_no, rent || 0, maintenance || 0, electricity || 0, gas || 0, water || 0, parking || 0, other_charges || 0, previous_arrears || 0, total_bill, grand_total, grand_total]
+      `INSERT INTO invoices (invoice_no, date, tenant_id, apartment_no, flat_rent, maintenance_charges, electricity_amount, prev_reading, curr_reading, units_consumed, gas_charges, water_charges, parking_charges, other_charges, previous_arrears, total_bill_amount, grand_total, amount_received, current_balance)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`,
+      [cleanInvoiceNo, date, tenant_id, apartment_no, rent || 0, maintenance || 0, electricity || 0, prev_reading || 0, curr_reading || 0, units_consumed || 0, gas || 0, water || 0, parking || 0, other_charges || 0, previous_arrears || 0, total_bill, grand_total, grand_total]
     );
 
     res.json({

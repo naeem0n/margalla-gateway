@@ -12,6 +12,11 @@
     "build:electron": "node scripts/build_packaged.js"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.2.0",
     "pg": "^8.16.0"
   },
   "devDependencies": {
@@ -52,6 +57,11 @@
     "@tanstack/react-router": "^1.168.0",
     "@tanstack/react-start": "^1.167.14",
     "@tanstack/router-plugin": "^1.167.10",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.2.0",
     "@types/node": "^22.16.5",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
@@ -150,4 +160,3 @@
     }
   }
 }
-

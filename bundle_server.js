@@ -19,7 +19,7 @@ esbuild.build({
   target: 'node22',
   outfile: 'server/index.cjs',
   format: 'cjs',
-  external: ['pg'],
+  external: ['pg', 'express', 'cors', 'bcryptjs', 'jsonwebtoken', 'multer'],
   plugins: [importMetaUrlPlugin]
 }).then(() => {
   console.log('Server API bundled successfully!');

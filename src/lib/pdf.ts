@@ -292,7 +292,7 @@ export function printHTMLReport(opts: PrintReportOptions | string) {
         max-width: 100%;
       }
       @page {
-        size: A5 ${opts.layout === 'landscape' ? 'landscape' : 'portrait'};
+        size: A4 ${opts.layout === 'landscape' ? 'landscape' : 'portrait'};
         margin: 1cm;
       }
     }
