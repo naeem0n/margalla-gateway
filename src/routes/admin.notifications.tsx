@@ -444,9 +444,13 @@ function SmsTransmitter() {
     setSmsStatus("");
     try {
       // Uses relative URL — works in both Vite dev proxy and Electron desktop
+      const smsToken = typeof localStorage !== "undefined" ? localStorage.getItem("mgt_api_token") : null;
       const response = await fetch("/api/notifications/send-real-sms", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(smsToken ? { Authorization: `Bearer ${smsToken}` } : {}),
+        },
         body: JSON.stringify({
           phone_number: testPhone.trim(),
           message_content: testMessage,

@@ -2,7 +2,7 @@ import { Router } from "express";
 import { config } from "../config.js";
 import { applyRemoteSyncItem, pushPendingToCloud } from "../sync/engine.js";
 import type { SyncQueueItem } from "../db/types.js";
-import { authRequired } from "../middleware/auth.js";
+import { authRequired, requireRole } from "../middleware/auth.js";
 
 const router = Router();
 
@@ -86,14 +86,15 @@ router.get("/client-status", authRequired, async (req, res) => {
   }
 });
 
-router.get("/config", async (req, res) => {
+router.get("/config", authRequired, requireRole("admin"), async (req, res) => {
   res.json({
     syncCloudUrl: config.syncCloudUrl,
-    syncApiKey: config.syncApiKey,
+    // Never return the raw shared secret; expose only whether one is set.
+    syncApiKeySet: Boolean(config.syncApiKey),
   });
 });
 
-router.post("/config", async (req, res) => {
+router.post("/config", authRequired, requireRole("admin"), async (req, res) => {
   const { syncCloudUrl, syncApiKey } = req.body ?? {};
   try {
     const fs = await import("node:fs");
@@ -101,9 +102,16 @@ router.post("/config", async (req, res) => {
     const sqliteDir = path.dirname(config.sqlitePath);
     const syncConfigPath = path.join(sqliteDir, "sync_config.json");
     
+    // The API key is never returned to the client, so an empty/omitted value
+    // here means "keep the existing key" rather than "clear it".
+    const nextApiKey =
+      typeof syncApiKey === "string" && syncApiKey.trim().length > 0
+        ? syncApiKey
+        : config.syncApiKey;
+
     const settings = {
       syncCloudUrl: syncCloudUrl ?? "",
-      syncApiKey: syncApiKey ?? "",
+      syncApiKey: nextApiKey ?? "",
     };
     
     if (!fs.existsSync(sqliteDir)) {
@@ -114,7 +122,7 @@ router.post("/config", async (req, res) => {
     config.syncCloudUrl = settings.syncCloudUrl;
     config.syncApiKey = settings.syncApiKey;
     
-    res.json({ success: true, settings });
+    res.json({ success: true, settings: { syncCloudUrl: settings.syncCloudUrl, syncApiKeySet: Boolean(settings.syncApiKey) } });
   } catch (e: any) {
     res.status(500).json({ error: e.message || "Failed to save sync config" });
   }

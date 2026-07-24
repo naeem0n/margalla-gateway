@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import https from "node:https";
+import { authRequired, requireRole } from "../middleware/auth.js";
 
 const router = Router();
 
@@ -7,7 +8,7 @@ const router = Router();
 // 🛡️ PAKISTAN SMS GATEWAY ENGINE
 // POST /api/notifications/send-real-sms
 // ============================================================
-router.post("/notifications/send-real-sms", (req: Request, res: Response) => {
+router.post("/notifications/send-real-sms", authRequired, requireRole("admin"), (req: Request, res: Response) => {
   try {
     const { phone_number, message_content } = req.body ?? {};
 

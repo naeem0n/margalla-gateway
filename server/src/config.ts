@@ -48,10 +48,31 @@ try {
   console.error("[SQLite Config] Failed to load sync_config.json:", e);
 }
 
+function resolveJwtSecret(): string {
+  const fromEnv = process.env.JWT_SECRET;
+  if (fromEnv && fromEnv.trim().length > 0) {
+    return fromEnv;
+  }
+  // In any non-development context (packaged desktop build or a real
+  // deployment) a missing JWT secret is fatal: falling back to a shared,
+  // publicly-known string would let anyone forge authentication tokens.
+  if (isPackaged || process.env.NODE_ENV === "production") {
+    throw new Error(
+      "JWT_SECRET is not set. Refusing to start with an insecure default secret. " +
+        "Set a strong, unique JWT_SECRET in the environment."
+    );
+  }
+  console.warn(
+    "[config] JWT_SECRET is not set — using an insecure development-only secret. " +
+      "Set JWT_SECRET before deploying."
+  );
+  return "margalla-dev-secret-change-in-production";
+}
+
 export const config = {
   port: Number(process.env.PORT ?? 3847),
   dbMode: (process.env.DB_MODE ?? "sqlite") as DbMode,
-  jwtSecret: process.env.JWT_SECRET ?? "margalla-dev-secret-change-in-production",
+  jwtSecret: resolveJwtSecret(),
   sqlitePath: defaultSqlitePath,
   
   // Writable directories (use path next to sqlite database in desktop/sqlite mode)

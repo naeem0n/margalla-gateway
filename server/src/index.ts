@@ -24,7 +24,38 @@ import accountingRoutes from "./routes/accounting.js";
 import type { UserRole } from "./db/types.js";
 
 const app = express();
-app.use(cors({ origin: true, credentials: true }));
+
+// CORS: when CORS_ALLOWED_ORIGINS is provided (comma-separated), only those
+// origins are permitted. Requests without an Origin header (same-origin,
+// native/desktop, curl) are always allowed. When the variable is unset the
+// previous permissive behaviour is preserved for local/desktop development,
+// but a warning is emitted so deployments are nudged towards an allowlist.
+const allowedOrigins = (process.env.CORS_ALLOWED_ORIGINS ?? "")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+if (allowedOrigins.length === 0) {
+  console.warn(
+    "[cors] CORS_ALLOWED_ORIGINS is not set — reflecting all origins. " +
+      "Set CORS_ALLOWED_ORIGINS to a comma-separated allowlist in production."
+  );
+}
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.length === 0) {
+        return callback(null, true);
+      }
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error(`Origin ${origin} not allowed by CORS`));
+    },
+    credentials: true,
+  })
+);
 app.use(express.json({ limit: "10mb" }));
 app.use("/uploads", express.static(config.uploadsDir));
 
