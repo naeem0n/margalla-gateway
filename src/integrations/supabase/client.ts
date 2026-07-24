@@ -2,6 +2,7 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 import { toast } from 'sonner';
+import { parseJwt } from '@/lib/jwt';
 
 // Apni dashboard se nayi keys yahan paste karein
 const supabaseUrl = 'https://mamhomsnsrzvnbboajpi.supabase.co';
@@ -24,22 +25,6 @@ const isDesktop = typeof window !== 'undefined' && (
   window.location.hostname === 'localhost' || 
   window.location.hostname === '127.0.0.1'
 );
-
-function parseJwt(token: string) {
-  try {
-    const base64Url = token.split(".")[1];
-    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-    const jsonPayload = decodeURIComponent(
-      window.atob(base64)
-        .split("")
-        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-        .join("")
-    );
-    return JSON.parse(jsonPayload);
-  } catch (e) {
-    return null;
-  }
-}
 
 // Custom Local Query Builder for Offline-First SQLite redirection
 class LocalQueryBuilder {

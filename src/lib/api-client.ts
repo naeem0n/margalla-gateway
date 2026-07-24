@@ -28,6 +28,58 @@ export function isDesktopApp(): boolean {
   return typeof window !== "undefined" && !!window.margallaDesktop;
 }
 
+const DESKTOP_API_FALLBACK = "http://localhost:3847/api";
+
+/**
+ * API base used by the offline-first desktop bridge. Falls back to the local
+ * admin server when the desktop shell has not injected an explicit base.
+ */
+export function getDesktopApiBase(): string {
+  if (typeof window !== "undefined" && window.margallaDesktop?.apiBase) {
+    return window.margallaDesktop.apiBase;
+  }
+  return DESKTOP_API_FALLBACK;
+}
+
+/** Build request headers, attaching the bearer token when one is stored. */
+export function authHeaders(extra?: HeadersInit): Headers {
+  const headers = new Headers(extra);
+  const token = getToken();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  return headers;
+}
+
+/** Trigger a browser download for an in-memory blob. */
+export function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function apiDownloadFile(path: string, filename: string, errorMessage: string) {
+  const res = await fetch(`${getApiBase()}${path}`, { headers: authHeaders() });
+  if (!res.ok) throw new Error(errorMessage);
+  downloadBlob(await res.blob(), filename);
+}
+
+async function apiUploadFile<T = unknown>(path: string, file: File, errorMessage: string): Promise<T> {
+  const fd = new FormData();
+  fd.append("file", file);
+  const res = await fetch(`${getApiBase()}${path}`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: fd,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error ?? errorMessage);
+  }
+  return res.json();
+}
+
 export async function apiFetch<T = unknown>(
   path: string,
   options: RequestInit = {},
@@ -115,65 +167,27 @@ export async function apiMe() {
 }
 
 export async function downloadDbBackup() {
-  const token = getToken();
-  const res = await fetch(`${getApiBase()}/backup/download`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
-  if (!res.ok) throw new Error("Backup download failed");
-  const blob = await res.blob();
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `margalla-backup-${new Date().toISOString().slice(0, 10)}.db`;
-  a.click();
-  URL.revokeObjectURL(url);
+  await apiDownloadFile(
+    "/backup/download",
+    `margalla-backup-${new Date().toISOString().slice(0, 10)}.db`,
+    "Backup download failed",
+  );
 }
 
 export async function restoreDbBackup(file: File) {
-  const fd = new FormData();
-  fd.append("file", file);
-  const token = getToken();
-  const res = await fetch(`${getApiBase()}/backup/restore`, {
-    method: "POST",
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-    body: fd,
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { error?: string }).error ?? "Restore failed");
-  }
-  return res.json();
+  return apiUploadFile<{ message?: string }>("/backup/restore", file, "Restore failed");
 }
 
 export async function downloadJsonBackup() {
-  const token = getToken();
-  const res = await fetch(`${getApiBase()}/backup/export-json`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
-  if (!res.ok) throw new Error("JSON Backup export failed");
-  const blob = await res.blob();
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `margalla-backup-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
+  await apiDownloadFile(
+    "/backup/export-json",
+    `margalla-backup-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.json`,
+    "JSON Backup export failed",
+  );
 }
 
 export async function restoreJsonBackup(file: File) {
-  const fd = new FormData();
-  fd.append("file", file);
-  const token = getToken();
-  const res = await fetch(`${getApiBase()}/backup/import-json`, {
-    method: "POST",
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-    body: fd,
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as { error?: string }).error ?? "JSON Import failed");
-  }
-  return res.json();
+  return apiUploadFile<{ message?: string }>("/backup/import-json", file, "JSON Import failed");
 }
 
 export async function getBackupLogs() {

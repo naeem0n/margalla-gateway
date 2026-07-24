@@ -1,7 +1,7 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import React, { useState, useEffect, FormEvent } from "react";
 import { Building2, Shield, Search, Loader2, LogOut, MessageSquare, ClipboardList, CheckCircle2, ShieldAlert, KeyRound, ArrowLeft, Home, RefreshCw, Lock } from "lucide-react";
-import { apiLogin, apiMe, apiFetch, getToken, isDesktopApp, apiChangeInitialPassword } from "@/lib/api-client";
+import { apiLogin, apiMe, apiFetch, getToken, getDesktopApiBase, isDesktopApp, apiChangeInitialPassword } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -202,7 +202,7 @@ export function ApartmentManager() {
     setLoading(true);
     try {
       // Fetch from direct fetch/Express endpoint
-      const apiBase = (window as any).margallaDesktop?.apiBase || "http://localhost:3847/api";
+      const apiBase = getDesktopApiBase();
       const token = getToken();
       const res = await fetch(`${apiBase}/thirdparty/apartments`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
