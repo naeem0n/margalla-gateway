@@ -12,15 +12,17 @@ import { Cloud, Wifi, WifiOff, RefreshCw } from "lucide-react";
 function SettingsPage() {
   const [syncCloudUrl, setSyncCloudUrl] = useState("");
   const [syncApiKey, setSyncApiKey] = useState("");
+  const [syncApiKeySet, setSyncApiKeySet] = useState(false);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<{ pendingCount: number; errorCount: number; isOnline: boolean } | null>(null);
 
   useEffect(() => {
     async function loadSettings() {
       try {
-        const configData = await apiFetch<{ syncCloudUrl: string; syncApiKey: string }>("/sync/config");
+        const configData = await apiFetch<{ syncCloudUrl: string; syncApiKeySet: boolean }>("/sync/config");
         setSyncCloudUrl(configData.syncCloudUrl || "");
-        setSyncApiKey(configData.syncApiKey || "");
+        setSyncApiKeySet(Boolean(configData.syncApiKeySet));
+        setSyncApiKey("");
       } catch (err) {
         console.error("Failed to load settings:", err);
       }
@@ -44,8 +46,14 @@ function SettingsPage() {
     try {
       await apiFetch("/sync/config", {
         method: "POST",
-        body: JSON.stringify({ syncCloudUrl, syncApiKey }),
+        // Only send the key when the admin actually entered a new one; an
+        // empty field leaves the stored key unchanged.
+        body: JSON.stringify(syncApiKey.trim() ? { syncCloudUrl, syncApiKey } : { syncCloudUrl }),
       });
+      if (syncApiKey.trim()) {
+        setSyncApiKeySet(true);
+        setSyncApiKey("");
+      }
       toast.success("Synchronization settings saved successfully!");
       
       // Request an immediate sync push
@@ -148,11 +156,11 @@ function SettingsPage() {
             <Input 
               type="password" 
               className="mt-1 font-mono text-sm" 
-              placeholder="Enter secure synchronization API key" 
+              placeholder={syncApiKeySet ? "•••••••••• (key set — leave blank to keep)" : "Enter secure synchronization API key"} 
               value={syncApiKey}
               onChange={(e) => setSyncApiKey(e.target.value)}
             />
-            <p className="text-[10px] text-muted-foreground mt-1">Secret key shared with the server to authenticate requests.</p>
+            <p className="text-[10px] text-muted-foreground mt-1">Secret key shared with the server to authenticate requests. For security it is never displayed; leave blank to keep the existing key.</p>
           </div>
           <Button 
             className="bg-[#cca43b] text-slate-950 hover:bg-[#b08c2d] font-semibold"

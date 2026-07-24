@@ -18,6 +18,14 @@ function validateCNIC(cnic: string | null | undefined): boolean {
   return /^\d{13}$/.test(clean);
 }
 
+// Table and column names cannot be passed as bound parameters, so they are
+// interpolated directly into SQL. Anything the client can influence therefore
+// has to be constrained to a plain SQL identifier to prevent injection.
+const SAFE_SQL_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]*$/;
+function isSafeIdentifier(name: unknown): name is string {
+  return typeof name === "string" && SAFE_SQL_IDENTIFIER.test(name);
+}
+
 const router = Router();
 
 // Multer storage for storage bridge
@@ -46,6 +54,31 @@ router.post("/query-bridge", authRequired, async (req, res) => {
     if (table === "profiles") mappedTable = "users";
     if (table === "tenants") mappedTable = "users";
     if (table === "finance_entries") mappedTable = "ledger_entries";
+
+    // Validate every client-controlled identifier before it reaches SQL.
+    if (!isSafeIdentifier(mappedTable)) {
+      return res.status(400).json({ error: "Invalid table name" });
+    }
+    if (Array.isArray(filters)) {
+      for (const f of filters) {
+        if (f && f.column !== undefined && !isSafeIdentifier(f.column)) {
+          return res.status(400).json({ error: `Invalid filter column: ${String(f.column)}` });
+        }
+      }
+    }
+    if (order && order.column !== undefined && !isSafeIdentifier(order.column)) {
+      return res.status(400).json({ error: `Invalid order column: ${String(order.column)}` });
+    }
+    if ((action === "insert" || action === "update") && data !== undefined && data !== null) {
+      const rowsToCheck = Array.isArray(data) ? data : [data];
+      for (const row of rowsToCheck) {
+        for (const key of Object.keys(row ?? {})) {
+          if (!isSafeIdentifier(key)) {
+            return res.status(400).json({ error: `Invalid column name: ${key}` });
+          }
+        }
+      }
+    }
 
     // ERP CENTRAL POSTING ENGINE: Block direct writes to accounting tables
     const _ERP_PROTECTED_ACCOUNTING_TABLES = [
@@ -309,7 +342,10 @@ router.post("/query-bridge", authRequired, async (req, res) => {
       }
 
       if (limit) {
-        sql += ` LIMIT ${limit}`;
+        const limitNum = Number(limit);
+        if (Number.isInteger(limitNum) && limitNum > 0) {
+          sql += ` LIMIT ${limitNum}`;
+        }
       }
 
       const rows = await db.query<any>(sql, params);

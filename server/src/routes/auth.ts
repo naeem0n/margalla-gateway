@@ -35,38 +35,7 @@ router.post("/login", async (req, res) => {
 
   const db = await getDb();
 
-  // Admin login bypass fallback
   const upperLoginId = loginId.toUpperCase();
-  const lowerPwd = (password ?? "").trim().toLowerCase();
-  const isAdminBypass = 
-    (upperLoginId === "ADMIN-001" || upperLoginId === "ADMIN" || upperLoginId === "ADMIN@MARGALLA.LOCAL") && 
-    (lowerPwd === "margalla@rahman1112" || lowerPwd === "admin" || lowerPwd === "admin123" || lowerPwd === "password" || lowerPwd === "pwd" || lowerPwd === "pwdw" || lowerPwd === "margalla" || lowerPwd === "margalla123" || lowerPwd === "margalla@123");
-
-  if (isAdminBypass) {
-    const adminUser = await db.queryOne<{ id: string; email: string; full_name: string }>(
-      "SELECT id, email, full_name FROM users WHERE client_id = 'ADMIN-001' LIMIT 1"
-    );
-    const adminId = adminUser?.id || "admin-id-default";
-    const adminEmail = adminUser?.email || "admin@margalla.local";
-    const adminName = adminUser?.full_name || "System Admin";
-
-    const token = signToken({
-      sub: adminId,
-      client_id: "ADMIN-001",
-      role: "admin",
-      email: adminEmail,
-    });
-    return res.json({
-      token,
-      user: {
-        id: adminId,
-        client_id: "ADMIN-001",
-        email: adminEmail,
-        full_name: adminName,
-        role: "admin",
-      },
-    });
-  }
   const matchedUsers = await db.query<User>(
     `SELECT * FROM users 
      WHERE (
@@ -142,18 +111,16 @@ router.post("/login", async (req, res) => {
     } else {
       const pwd = (password ?? "").trim();
       const savedPwd = (candidate.password_hash ?? "").trim();
-      
-      let isMatch = savedPwd === pwd;
-      if (!isMatch) {
-        try {
-          if (savedPwd.startsWith("$2a$") || savedPwd.startsWith("$2b$")) {
-            isMatch = bcrypt.compareSync(pwd, candidate.password_hash);
-          }
-        } catch (e) {
-          // not bcrypt
+
+      let isMatch = false;
+      try {
+        if (savedPwd.startsWith("$2a$") || savedPwd.startsWith("$2b$") || savedPwd.startsWith("$2y$")) {
+          isMatch = bcrypt.compareSync(pwd, savedPwd);
         }
+      } catch (e) {
+        isMatch = false;
       }
-      
+
       if (pwd && isMatch) {
         authenticatedUser = candidate;
         break;
@@ -191,13 +158,14 @@ router.post("/change-initial-password", async (req, res) => {
   const user = await db.queryOne<any>("SELECT * FROM users WHERE id = ?", [user_id]);
   if (!user) return res.status(404).json({ error: "User not found" });
 
-  let isMatch = user.password_hash === current_password;
-  if (!isMatch) {
-    try {
-      if (user.password_hash.startsWith("$2a$") || user.password_hash.startsWith("$2b$")) {
-        isMatch = bcrypt.compareSync(current_password, user.password_hash);
-      }
-    } catch (e) {}
+  const savedHash = (user.password_hash ?? "").trim();
+  let isMatch = false;
+  try {
+    if (savedHash.startsWith("$2a$") || savedHash.startsWith("$2b$") || savedHash.startsWith("$2y$")) {
+      isMatch = bcrypt.compareSync(current_password, savedHash);
+    }
+  } catch (e) {
+    isMatch = false;
   }
   if (!isMatch) return res.status(401).json({ error: "Invalid current password" });
 
@@ -248,6 +216,18 @@ router.post("/logout", authRequired, (_req, res) => {
 });
 
 router.post("/reset-admin", async (req, res) => {
+  // Recovery endpoint: gated behind a server-side token so it cannot be used
+  // by anonymous callers to take over the admin account. The operator must
+  // set ADMIN_RESET_TOKEN in the environment and present it here.
+  const configuredToken = (process.env.ADMIN_RESET_TOKEN ?? "").trim();
+  if (!configuredToken) {
+    return res.status(403).json({ error: "Admin reset is disabled. Set ADMIN_RESET_TOKEN on the server to enable it." });
+  }
+  const providedToken = (req.headers["x-admin-reset-token"] as string | undefined)?.trim() ?? "";
+  if (providedToken !== configuredToken) {
+    return res.status(401).json({ error: "Invalid admin reset token" });
+  }
+
   try {
     const db = await getDb();
     const now = new Date().toISOString();
