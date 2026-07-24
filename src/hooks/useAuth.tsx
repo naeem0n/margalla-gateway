@@ -2,24 +2,9 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
 import { getToken } from "@/lib/api-client";
+import { parseJwt } from "@/lib/jwt";
 
 export type AppRole = "admin" | "staff" | "resident" | "thirdparty";
-
-function parseJwt(token: string) {
-  try {
-    const base64Url = token.split(".")[1];
-    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-    const jsonPayload = decodeURIComponent(
-      window.atob(base64)
-        .split("")
-        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-        .join("")
-    );
-    return JSON.parse(jsonPayload);
-  } catch (e) {
-    return null;
-  }
-}
 
 export function useAuth() {
   const [session, setSession] = useState<Session | null>(null);

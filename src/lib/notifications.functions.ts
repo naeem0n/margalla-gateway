@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeader } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
+import { getToken, getDesktopApiBase } from "@/lib/api-client";
 
 async function requireStaffOrAdmin() {
   const url = process.env.SUPABASE_URL!;
@@ -310,8 +311,8 @@ const serverGetNotificationProviderStatus = createServerFn({ method: "GET" }).ha
 // ---------- Client Wrappers ----------
 export const sendNotification = async (args: { data: any }) => {
   if (isDesktop) {
-    const token = localStorage.getItem("mgt_api_token") || "";
-    const apiBase = (window as any).margallaDesktop?.apiBase || "http://localhost:3847/api";
+    const token = getToken() || "";
+    const apiBase = getDesktopApiBase();
     const res = await fetch(`${apiBase}/notifications/send`, {
       method: "POST",
       headers: {
@@ -331,8 +332,8 @@ export const sendNotification = async (args: { data: any }) => {
 
 export const getNotificationProviderStatus = async () => {
   if (isDesktop) {
-    const token = localStorage.getItem("mgt_api_token") || "";
-    const apiBase = (window as any).margallaDesktop?.apiBase || "http://localhost:3847/api";
+    const token = getToken() || "";
+    const apiBase = getDesktopApiBase();
     const res = await fetch(`${apiBase}/notifications/provider-status`, {
       method: "GET",
       headers: {
