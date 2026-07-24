@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { getDb, newId, now } from "../db/index.js";
 import { authRequired, requireRole } from "../middleware/auth.js";
+import { runBestEffort } from "../lib/errors.js";
 
 const router = Router();
 
@@ -188,7 +189,7 @@ router.post("/", authRequired, requireRole("admin"), async (req, res) => {
     };
 
     // Queue for cloud sync (non-blocking)
-    try { await db.enqueueSync("apartments", id, "insert", payload); } catch (_) {}
+    await runBestEffort("enqueueSync apartments insert", () => db.enqueueSync("apartments", id, "insert", payload));
 
     res.json({ success: true, apartment: payload });
   } catch (e: any) {
@@ -285,7 +286,7 @@ router.put("/:id", authRequired, requireRole("admin"), async (req, res) => {
     };
 
     // Queue for cloud sync (non-blocking)
-    try { await db.enqueueSync("apartments", id, "update", payload); } catch (_) {}
+    await runBestEffort("enqueueSync apartments update", () => db.enqueueSync("apartments", id, "update", payload));
 
     res.json({ success: true, apartment: payload });
   } catch (e: any) {
@@ -312,38 +313,38 @@ router.delete("/:id", authRequired, requireRole("admin"), async (req, res) => {
     for (const u of users) {
       const userId = u.id;
       // Cascade delete user references just like in users.ts delete route
-      try { await db.run("DELETE FROM leases WHERE resident_id IN (SELECT id FROM residents WHERE user_id = ?)", [userId]); } catch (_) {}
-      try { await db.run("DELETE FROM residents WHERE user_id = ?", [userId]); } catch (_) {}
-      try { await db.run("UPDATE parking SET assigned_tenant_id = NULL, status = 'available' WHERE assigned_tenant_id = ?", [userId]); } catch (_) {}
-      try { await db.run("DELETE FROM ledger_entries WHERE user_id = ?", [userId]); } catch (_) {}
-      try { await db.run("DELETE FROM invoice_items WHERE invoice_id IN (SELECT id FROM invoice_headers WHERE tenant_id = ?)", [userId]); } catch (_) {}
-      try { await db.run("DELETE FROM invoice_headers WHERE tenant_id = ?", [userId]); } catch (_) {}
-      try { await db.run("DELETE FROM invoices WHERE tenant_id = ?", [userId]); } catch (_) {}
-      try { await db.run("DELETE FROM payments WHERE tenant_id = ?", [userId]); } catch (_) {}
-      try { await db.run("DELETE FROM receipt_vouchers WHERE tenant_id = ?", [userId]); } catch (_) {}
-      try { await db.run("DELETE FROM security_deposits WHERE tenant_id = ?", [userId]); } catch (_) {}
-      try { await db.run("DELETE FROM tenant_ledger WHERE tenant_id = ?", [userId]); } catch (_) {}
-      try { await db.run("DELETE FROM complaints WHERE resident_id = ?", [userId]); } catch (_) {}
-      try { await db.run("DELETE FROM payment_requests WHERE resident_id = ? OR tenant_id = ?", [userId, userId]); } catch (_) {}
-      try { await db.run("DELETE FROM chart_of_accounts WHERE acco_id IN ('1200.1.1.' || ?, '2100.1.1.' || ?, '1300.1.1.' || ?)", [userId, userId, userId]); } catch (_) {}
-      try { await db.run("DELETE FROM users WHERE id = ?", [userId]); } catch (_) {}
+      await runBestEffort(`cascade delete leases for user ${userId}`, () => db.run("DELETE FROM leases WHERE resident_id IN (SELECT id FROM residents WHERE user_id = ?)", [userId]));
+      await runBestEffort(`cascade delete residents for user ${userId}`, () => db.run("DELETE FROM residents WHERE user_id = ?", [userId]));
+      await runBestEffort(`cascade release parking for user ${userId}`, () => db.run("UPDATE parking SET assigned_tenant_id = NULL, status = 'available' WHERE assigned_tenant_id = ?", [userId]));
+      await runBestEffort(`cascade delete ledger_entries for user ${userId}`, () => db.run("DELETE FROM ledger_entries WHERE user_id = ?", [userId]));
+      await runBestEffort(`cascade delete invoice_items for user ${userId}`, () => db.run("DELETE FROM invoice_items WHERE invoice_id IN (SELECT id FROM invoice_headers WHERE tenant_id = ?)", [userId]));
+      await runBestEffort(`cascade delete invoice_headers for user ${userId}`, () => db.run("DELETE FROM invoice_headers WHERE tenant_id = ?", [userId]));
+      await runBestEffort(`cascade delete invoices for user ${userId}`, () => db.run("DELETE FROM invoices WHERE tenant_id = ?", [userId]));
+      await runBestEffort(`cascade delete payments for user ${userId}`, () => db.run("DELETE FROM payments WHERE tenant_id = ?", [userId]));
+      await runBestEffort(`cascade delete receipt_vouchers for user ${userId}`, () => db.run("DELETE FROM receipt_vouchers WHERE tenant_id = ?", [userId]));
+      await runBestEffort(`cascade delete security_deposits for user ${userId}`, () => db.run("DELETE FROM security_deposits WHERE tenant_id = ?", [userId]));
+      await runBestEffort(`cascade delete tenant_ledger for user ${userId}`, () => db.run("DELETE FROM tenant_ledger WHERE tenant_id = ?", [userId]));
+      await runBestEffort(`cascade delete complaints for user ${userId}`, () => db.run("DELETE FROM complaints WHERE resident_id = ?", [userId]));
+      await runBestEffort(`cascade delete payment_requests for user ${userId}`, () => db.run("DELETE FROM payment_requests WHERE resident_id = ? OR tenant_id = ?", [userId, userId]));
+      await runBestEffort(`cascade delete chart_of_accounts for user ${userId}`, () => db.run("DELETE FROM chart_of_accounts WHERE acco_id IN ('1200.1.1.' || ?, '2100.1.1.' || ?, '1300.1.1.' || ?)", [userId, userId, userId]));
+      await runBestEffort(`cascade delete users for user ${userId}`, () => db.run("DELETE FROM users WHERE id = ?", [userId]));
     }
 
     // 2. Cascade delete direct apartment references in other tables
-    try { await db.run("DELETE FROM daily_bookings WHERE apartment_id = ?", [id]); } catch (_) {}
-    try { await db.run("DELETE FROM apartment_manual_assets WHERE apartment_no = ? OR apartment_no = ?", [aptNo, aptNo.toUpperCase()]); } catch (_) {}
-    try { await db.run("DELETE FROM apartment_meter_readings WHERE apartment_no = ? OR apartment_no = ?", [aptNo, aptNo.toUpperCase()]); } catch (_) {}
-    try { await db.run("DELETE FROM monthly_billing WHERE apartment_no = ? OR apartment_no = ?", [aptNo, aptNo.toUpperCase()]); } catch (_) {}
-    try { await db.run("DELETE FROM tenants WHERE apartment_no = ? OR apartment_no = ?", [aptNo, aptNo.toUpperCase()]); } catch (_) {}
-    try { await db.run("DELETE FROM invoices WHERE apartment_no = ? OR apartment_no = ?", [aptNo, aptNo.toUpperCase()]); } catch (_) {}
-    try { await db.run("DELETE FROM ledger_entries WHERE user_id IN (SELECT id FROM users WHERE apartment_no = ? OR apartment_no = ?)", [aptNo, aptNo.toUpperCase()]); } catch (_) {}
-    try { await db.run("UPDATE parking SET status = 'available' WHERE number = ? OR number = ?", [aptNo, aptNo.toUpperCase()]); } catch (_) {}
+    await runBestEffort(`cascade delete daily_bookings for apartment ${id}`, () => db.run("DELETE FROM daily_bookings WHERE apartment_id = ?", [id]));
+    await runBestEffort(`cascade delete apartment_manual_assets for ${aptNo}`, () => db.run("DELETE FROM apartment_manual_assets WHERE apartment_no = ? OR apartment_no = ?", [aptNo, aptNo.toUpperCase()]));
+    await runBestEffort(`cascade delete apartment_meter_readings for ${aptNo}`, () => db.run("DELETE FROM apartment_meter_readings WHERE apartment_no = ? OR apartment_no = ?", [aptNo, aptNo.toUpperCase()]));
+    await runBestEffort(`cascade delete monthly_billing for ${aptNo}`, () => db.run("DELETE FROM monthly_billing WHERE apartment_no = ? OR apartment_no = ?", [aptNo, aptNo.toUpperCase()]));
+    await runBestEffort(`cascade delete tenants for ${aptNo}`, () => db.run("DELETE FROM tenants WHERE apartment_no = ? OR apartment_no = ?", [aptNo, aptNo.toUpperCase()]));
+    await runBestEffort(`cascade delete invoices for ${aptNo}`, () => db.run("DELETE FROM invoices WHERE apartment_no = ? OR apartment_no = ?", [aptNo, aptNo.toUpperCase()]));
+    await runBestEffort(`cascade delete ledger_entries for ${aptNo}`, () => db.run("DELETE FROM ledger_entries WHERE user_id IN (SELECT id FROM users WHERE apartment_no = ? OR apartment_no = ?)", [aptNo, aptNo.toUpperCase()]));
+    await runBestEffort(`cascade release parking for ${aptNo}`, () => db.run("UPDATE parking SET status = 'available' WHERE number = ? OR number = ?", [aptNo, aptNo.toUpperCase()]));
 
     // 3. Delete the apartment itself
     await db.run("DELETE FROM apartments WHERE id = ?", [id]);
-    
+
     // Queue delete for cloud sync (non-blocking)
-    try { await db.enqueueSync("apartments", id, "delete", { id }); } catch (_) {}
+    await runBestEffort("enqueueSync apartments delete", () => db.enqueueSync("apartments", id, "delete", { id }));
 
     res.json({ success: true, message: "Apartment and all associated ledger history permanently deleted" });
   } catch (e: any) {

@@ -4,6 +4,7 @@ import path from "node:path";
 import fs from "node:fs";
 import bcrypt from "bcryptjs";
 import { config } from "./config.js";
+import type { NextFunction, Request, Response } from "express";
 import { getDb } from "./db/index.js";
 import { startSyncInterval } from "./sync/engine.js";
 import authRoutes from "./routes/auth.js";
@@ -74,9 +75,14 @@ app.get("/api/search", async (req, res) => {
     });
 
   } catch (globalError: any) {
-    console.error("Critical API search block bypassed globally:", globalError.message);
+    console.error("Global search failed:", globalError);
     if (!res.headersSent) {
-      res.json(defaultResponse);
+      res.status(500).json({
+        success: false,
+        results: [],
+        total: 0,
+        error: globalError?.message || "Search failed",
+      });
     }
   }
 });
@@ -179,6 +185,19 @@ app.get("*", (req, res, next) => {
   if (req.path.startsWith("/api")) return next();
   res.sendFile(path.join(distPath, "index.html"), (err) => {
     if (err) next();
+  });
+});
+
+// Central error handler: ensures errors surfaced via next(err) (or thrown in a
+// sync handler) are logged and returned as a proper 500 instead of leaving the
+// request hanging or leaking a stack trace to the client.
+app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
+  console.error(`Unhandled error on ${req.method} ${req.originalUrl}:`, err);
+  if (res.headersSent) {
+    return _next(err);
+  }
+  res.status(err?.status || err?.statusCode || 500).json({
+    error: err?.message || "Internal server error",
   });
 });
 

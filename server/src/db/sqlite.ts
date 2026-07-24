@@ -716,7 +716,9 @@ export class SqliteDb {
     try {
       this.db.exec("DROP VIEW IF EXISTS tenants;");
       console.log("[SQLite] tenants view dropped successfully if it existed.");
-    } catch (e) {}
+    } catch (e) {
+      console.warn("[SQLite] Failed to drop tenants view:", e);
+    }
 
     // Validate that all required tables exist, otherwise run schema initialization
     try {

@@ -266,7 +266,9 @@ router.post("/import-json", authRequired, requireRole("admin"), upload.single("f
       const { getDb } = await import("../db/index.js");
       const db = await getDb();
       await db.run("PRAGMA foreign_keys = ON");
-    } catch {}
+    } catch (pragmaErr) {
+      console.warn("[backup] Failed to re-enable foreign_keys after failed JSON import:", pragmaErr);
+    }
 
     await logBackupAction({
       action: "JSON Snapshot Import",
@@ -345,7 +347,10 @@ export async function runAutoBackup(performed_by: string = "system") {
   const backupDir = path.join(path.dirname(config.sqlitePath), "backups");
   try {
     fs.mkdirSync(backupDir, { recursive: true });
-  } catch (err) {}
+  } catch (err) {
+    console.error(`[backup] Failed to create backup directory ${backupDir}:`, err);
+    return;
+  }
 
   const stamp = new Date().toISOString().slice(0, 10); // YYYY-MM-DD format
   const fileName = `auto-backup-${stamp}.db`;
