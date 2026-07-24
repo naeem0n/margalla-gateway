@@ -1,10 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { DatabaseSync } from "node:sqlite";
 import { randomUUID } from "node:crypto";
-import { syncLedgerToDoubleEntry } from "./sqlite.js";
+
+// `node:sqlite` is only available on Node >= 22.5 (with --experimental-sqlite).
+// Load it (and the module under test, which imports it) lazily so the suite
+// skips gracefully instead of crashing the whole run on older runtimes.
+let DatabaseSync: typeof import("node:sqlite").DatabaseSync | undefined;
+let syncLedgerToDoubleEntry:
+  | typeof import("./sqlite.js").syncLedgerToDoubleEntry
+  | undefined;
+let hasNodeSqlite = true;
+try {
+  ({ DatabaseSync } = await import("node:sqlite"));
+  ({ syncLedgerToDoubleEntry } = await import("./sqlite.js"));
+} catch {
+  hasNodeSqlite = false;
+}
 
 function createTestDb() {
-  const db = new DatabaseSync(':memory:');
+  const db = new DatabaseSync!(':memory:');
   db.exec(`
     CREATE TABLE ledger_entries (
       id TEXT PRIMARY KEY,
@@ -62,7 +75,7 @@ function createTestDb() {
   return db;
 }
 
-describe("syncLedgerToDoubleEntry", () => {
+describe.skipIf(!hasNodeSqlite)("syncLedgerToDoubleEntry", () => {
   it("is idempotent for repeated ledger postings", () => {
     const db = createTestDb();
     const entryId = randomUUID();
@@ -78,8 +91,8 @@ describe("syncLedgerToDoubleEntry", () => {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(entryId, "user-1", "2026-07-10", "rent", "Test rental entry", 1000, 0, 0, "admin", ts, ts, "LGR-000001");
 
-    syncLedgerToDoubleEntry(db as any, entryId);
-    syncLedgerToDoubleEntry(db as any, entryId);
+    syncLedgerToDoubleEntry!(db as any, entryId);
+    syncLedgerToDoubleEntry!(db as any, entryId);
 
     const journalEntries = db.prepare("SELECT COUNT(*) as count FROM journal_entries").get() as { count: number };
     const journalLines = db.prepare("SELECT COUNT(*) as count FROM journal_lines").get() as { count: number };
@@ -119,7 +132,7 @@ describe("syncLedgerToDoubleEntry", () => {
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `).run(randomUUID(), staleEntryId, "2100", 0, 500, ts, ts);
 
-  syncLedgerToDoubleEntry(db as any, entryId);
+  syncLedgerToDoubleEntry!(db as any, entryId);
 
     const journalEntries = db.prepare("SELECT COUNT(*) as count FROM journal_entries").get() as { count: number };
     const journalLines = db.prepare("SELECT COUNT(*) as count FROM journal_lines").get() as { count: number };
