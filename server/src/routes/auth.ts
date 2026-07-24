@@ -197,7 +197,9 @@ router.post("/change-initial-password", async (req, res) => {
       if (user.password_hash.startsWith("$2a$") || user.password_hash.startsWith("$2b$")) {
         isMatch = bcrypt.compareSync(current_password, user.password_hash);
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn("[auth] bcrypt comparison failed during change-initial-password:", e);
+    }
   }
   if (!isMatch) return res.status(401).json({ error: "Invalid current password" });
 

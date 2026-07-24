@@ -2,6 +2,7 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { getDb, newId, now, nextClientId } from "../db/index.js";
 import { authRequired, requireRole, stripUser } from "../middleware/auth.js";
+import { runBestEffort } from "../lib/errors.js";
 import type { User } from "../db/types.js";
 
 function validatePhone(phone: string | null | undefined): boolean {
@@ -112,7 +113,7 @@ router.post("/generate", authRequired, requireRole("admin"), async (req, res) =>
     );
     const updated = await db.queryOne<User>("SELECT * FROM users WHERE id = ?", [existing.id]);
     if (updated) {
-      try { await db.enqueueSync("users", existing.id, "update", updated); } catch (_) {}
+      await runBestEffort("enqueueSync users", () => db.enqueueSync("users", existing.id, "update", updated));
       if (password) {
         await triggerWelcomeNotification(db, updated, password);
       }
@@ -146,7 +147,7 @@ router.post("/generate", authRequired, requireRole("admin"), async (req, res) =>
   );
   const inserted = await db.queryOne<User>("SELECT * FROM users WHERE id = ?", [id]);
   if (inserted) {
-    try { await db.enqueueSync("users", id, "insert", inserted); } catch (_) {}
+    await runBestEffort("enqueueSync users", () => db.enqueueSync("users", id, "insert", inserted));
     if (password) {
       await triggerWelcomeNotification(db, inserted, password);
     }
@@ -213,7 +214,7 @@ router.post("/create-tenant", authRequired, requireRole("admin"), async (req, re
     );
     const updated = await db.queryOne<User>("SELECT * FROM users WHERE id = ?", [existing.id]);
     if (updated) {
-      try { await db.enqueueSync("users", existing.id, "update", updated); } catch (_) {}
+      await runBestEffort("enqueueSync users", () => db.enqueueSync("users", existing.id, "update", updated));
       if (password) {
         await triggerWelcomeNotification(db, updated, password);
       }
@@ -256,7 +257,7 @@ router.post("/create-tenant", authRequired, requireRole("admin"), async (req, re
 
     const inserted = await db.queryOne<User>("SELECT * FROM users WHERE id = ?", [userId]);
     if (inserted) {
-      try { await db.enqueueSync("users", userId, "insert", inserted); } catch (_) {}
+      await runBestEffort("enqueueSync users", () => db.enqueueSync("users", userId, "insert", inserted));
       if (password) {
         await triggerWelcomeNotification(db, inserted, password);
       }
@@ -355,7 +356,7 @@ router.patch("/:id", authRequired, requireRole("admin"), async (req, res) => {
     );
     const updated = await db.queryOne<User>("SELECT * FROM users WHERE id = ?", [req.params.id]);
     if (updated) {
-      try { await db.enqueueSync("users", req.params.id, "update", updated); } catch (_) {}
+      await runBestEffort("enqueueSync users", () => db.enqueueSync("users", req.params.id, "update", updated));
     }
     if (db.mode === "sqlite") {
       try {
@@ -390,7 +391,7 @@ router.patch("/:id", authRequired, requireRole("admin"), async (req, res) => {
     );
     const inserted = await db.queryOne<User>("SELECT * FROM users WHERE id = ?", [req.params.id]);
     if (inserted) {
-      try { await db.enqueueSync("users", req.params.id, "insert", inserted); } catch (_) {}
+      await runBestEffort("enqueueSync users", () => db.enqueueSync("users", req.params.id, "insert", inserted));
     }
     if (db.mode === "sqlite") {
       try {
@@ -430,7 +431,7 @@ router.post("/:id/reset-password", authRequired, requireRole("admin"), async (re
     );
     const updated = await db.queryOne<User>("SELECT * FROM users WHERE id = ?", [req.params.id]);
     if (updated) {
-      try { await db.enqueueSync("users", req.params.id, "update", updated); } catch (_) {}
+      await runBestEffort("enqueueSync users", () => db.enqueueSync("users", req.params.id, "update", updated));
       await triggerWelcomeNotification(db, updated, password);
     }
   } else {
@@ -461,7 +462,7 @@ router.post("/:id/reset-password", authRequired, requireRole("admin"), async (re
     );
     const inserted = await db.queryOne<User>("SELECT * FROM users WHERE id = ?", [req.params.id]);
     if (inserted) {
-      try { await db.enqueueSync("users", req.params.id, "insert", inserted); } catch (_) {}
+      await runBestEffort("enqueueSync users", () => db.enqueueSync("users", req.params.id, "insert", inserted));
       await triggerWelcomeNotification(db, inserted, password);
     }
   }
@@ -497,21 +498,21 @@ router.delete("/:id", authRequired, requireRole("admin"), async (req, res) => {
     await db.run("DELETE FROM tenant_ledger WHERE tenant_id = ?", [req.params.id]);
     await db.run("DELETE FROM complaints WHERE resident_id = ?", [req.params.id]);
     
-    try {
-      await db.run("DELETE FROM payment_requests WHERE resident_id = ? OR tenant_id = ?", [req.params.id, req.params.id]);
-    } catch {}
+    await runBestEffort(`cascade delete payment_requests for user ${req.params.id}`, () =>
+      db.run("DELETE FROM payment_requests WHERE resident_id = ? OR tenant_id = ?", [req.params.id, req.params.id])
+    );
 
     // Clean up chart of accounts for the user
-    try {
-      await db.run(
+    await runBestEffort(`cascade delete chart_of_accounts for user ${req.params.id}`, () =>
+      db.run(
         "DELETE FROM chart_of_accounts WHERE acco_id IN ('1200.1.1.' || ?, '2100.1.1.' || ?, '1300.1.1.' || ?)",
         [req.params.id, req.params.id, req.params.id]
-      );
-    } catch {}
+      )
+    );
 
     // 3. Delete user
     await db.run("DELETE FROM users WHERE id = ?", [req.params.id]);
-    try { await db.enqueueSync("users", req.params.id, "delete", { id: req.params.id }); } catch (_) {}
+    await runBestEffort("enqueueSync users", () => db.enqueueSync("users", req.params.id, "delete", { id: req.params.id }));
 
     if (db.mode === "postgres") {
       try {
